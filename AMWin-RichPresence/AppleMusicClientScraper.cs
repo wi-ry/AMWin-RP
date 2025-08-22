@@ -69,14 +69,16 @@ namespace AMWin_RichPresence {
         }
     }
 
-    internal class AppleMusicClientScraper {
-        struct WebReqFailCounters {
+    internal class AppleMusicClientScraper : IDisposable
+    {
+        struct WebReqFailCounters
+        {
             public int MaxFails = Constants.NumFailedSearchesBeforeAbandon;
 
-            public int SongDuration = 0;
-            public int AlbumArt = 0;
-            public int ArtistList = 0;
-            public int SongUrl = 0;
+            public int SongDuration;
+            public int AlbumArt;
+            public int ArtistList;
+            public int SongUrl;
 
             public WebReqFailCounters() { }
         };
@@ -85,7 +87,7 @@ namespace AMWin_RichPresence {
 
         public delegate void RefreshHandler(AppleMusicInfo? newInfo);
         string? lastFmApiKey;
-        Timer timer;
+        private Timer timer;
         RefreshHandler refreshHandler;
         AppleMusicInfo? currentSong;
         public bool composerAsArtist; // for classical music, treat composer (not performer) as artist
@@ -93,8 +95,10 @@ namespace AMWin_RichPresence {
         double? previousSongProgress;
         string appleMusicRegion;
         WebReqFailCounters webReqFails = new();
+        private bool _disposed = false;
 
-        public AppleMusicClientScraper(string? lastFmApiKey, int refreshPeriodInSec, bool composerAsArtist, string appleMusicRegion, RefreshHandler refreshHandler, Logger? logger = null) {
+        public AppleMusicClientScraper(string? lastFmApiKey, int refreshPeriodInSec, bool composerAsArtist, string appleMusicRegion, RefreshHandler refreshHandler, Logger? logger = null)
+        {
             this.refreshHandler = refreshHandler;
             this.logger = logger;
             this.lastFmApiKey = lastFmApiKey;
@@ -107,19 +111,22 @@ namespace AMWin_RichPresence {
             timer.Start();
         }
 
-        ~AppleMusicClientScraper() {
-            timer.Elapsed -= Refresh;
-        }
-
-        public void ChangeRegion(string region) {
+        public void ChangeRegion(string region)
+        {
             this.appleMusicRegion = region;
             Refresh(this, null);
         }
 
-        public async void Refresh(object? source, ElapsedEventArgs? e) {
-            try {
+        public async void Refresh(object? source, ElapsedEventArgs? e)
+        {
+            if (_disposed) return;
+
+            try
+            {
                 await GetAppleMusicInfo();
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 logger?.Log($"Something went wrong while scraping: {ex}");
             }
             refreshHandler(currentSong);
@@ -413,6 +420,31 @@ namespace AMWin_RichPresence {
                 }
             }
             return new(songArtist, songAlbum, songPerformer);
+        }
+
+        // IDisposable implementation
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    timer?.Stop();
+                    timer?.Dispose();
+                }
+                _disposed = true;
+            }
+        }
+
+        ~AppleMusicClientScraper()
+        {
+            Dispose(false);
         }
     }
 }

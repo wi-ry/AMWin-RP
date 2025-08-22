@@ -94,29 +94,32 @@ namespace AMWin_RichPresence {
 
             // start Apple Music scraper
             amScraper = new(lastFMApiKey, Constants.RefreshPeriod, classicalComposerAsArtist, AMWin_RichPresence.Properties.Settings.Default.AppleMusicRegion, (newInfo) => {
+                // Discord RP update
+                if (AMWin_RichPresence.Properties.Settings.Default.EnableDiscordRP)
+                {
+                    discordClient.Enable();
+                    discordClient.SetPresence(newInfo,
+                        AMWin_RichPresence.Properties.Settings.Default.ShowAppleMusicIcon,
+                        AMWin_RichPresence.Properties.Settings.Default.EnableRPCoverImages);
+                }
+                else
+                {
+                    discordClient.Disable();
+                }
 
-                // don't update scraper if Apple Music is paused or not open
-                if (newInfo != null && (AMWin_RichPresence.Properties.Settings.Default.ShowRPWhenMusicPaused || !newInfo.IsPaused)) {
-
-                    // Discord RP update
-                    if (AMWin_RichPresence.Properties.Settings.Default.EnableDiscordRP) {
-                        discordClient.Enable();
-                        discordClient.SetPresence(newInfo, AMWin_RichPresence.Properties.Settings.Default.ShowAppleMusicIcon, AMWin_RichPresence.Properties.Settings.Default.EnableRPCoverImages);
-                    } else {
-                        discordClient.Disable();
-                    }
-
+                if (newInfo != null)
+                {
                     // Last.FM scrobble update
-                    if (AMWin_RichPresence.Properties.Settings.Default.LastfmEnable) {
+                    if (AMWin_RichPresence.Properties.Settings.Default.LastfmEnable)
+                    {
                         lastFmScrobblerClient.Scrobbleit(newInfo);
                     }
 
                     // ListenBrainz scrobble update
-                    if (AMWin_RichPresence.Properties.Settings.Default.ListenBrainzEnable) {
+                    if (AMWin_RichPresence.Properties.Settings.Default.ListenBrainzEnable)
+                    {
                         listenBrainzScrobblerClient.Scrobbleit(newInfo);
                     }
-                } else {
-                    discordClient.Disable();
                 }
             }, logger);
         }
@@ -129,6 +132,7 @@ namespace AMWin_RichPresence {
         private void Application_Exit(object sender, ExitEventArgs e) {
             taskbarIcon?.Dispose();
             discordClient.Disable();
+            amScraper?.Dispose();
             logger?.Log("Application finished");
         }
 

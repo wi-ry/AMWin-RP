@@ -44,8 +44,14 @@ internal class AppleMusicDiscordClient {
         }
     }
 
-    public void SetPresence(AppleMusicInfo amInfo, bool showSmallImage, bool showBigImage) {
+    public void SetPresence(AppleMusicInfo? amInfo, bool showSmallImage, bool showBigImage) {
         if (!enabled) {
+            return;
+        }
+
+        if (amInfo == null) {
+            client?.ClearPresence();
+            logger?.Log("Cleared Discord RP (no Apple Music running)");
             return;
         }
 
